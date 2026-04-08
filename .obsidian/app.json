@@ -1,0 +1,16 @@
+{
+  "defaultViewMode": "preview",
+  "newFileLocation": "folder",
+  "newFileFolderPath": "inbox/temp",
+  "attachmentFolderPath": "添付",
+  "newLinkFormat": "absolute",
+  "alwaysUpdateLinks": true,
+  "trashOption": "local",
+  "pdfExportSettings": {
+    "includeName": false,
+    "pageSize": "A4",
+    "landscape": false,
+    "margin": "1",
+    "downscalePercent": 100
+  }
+}
