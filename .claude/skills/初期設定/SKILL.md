@@ -89,13 +89,45 @@ claude mcp add notebooklm-mcp -- notebooklm-mcp
 - 複数 Google アカウントを使い分ける場合は `nlm login switch <profile>` でデフォルトを切り替える
 - Gemini CLI / Cursor / Windsurf を使っているなら `nlm setup add <client>` で MCP を自動登録できる（Claude Code は対象外なので手動の `claude mcp add` が必要）
 
-#### コミュニケーション系
+#### Google Workspace 系（OAuth 1回で全サービス連携）
+
+**google-workspace** が最も強力。Docs / Drive / Sheets / Slides / Gmail / Calendar / Tasks / Forms / Chat / Contacts を1つのMCPでカバーする統合実装。Google Cloud Console で関連API（Docs / Drive / Sheets / Slides / Gmail / Calendar / Tasks / Forms 等）を有効化したプロジェクトのOAuthクレデンシャル（`credentials.json`）が必要。
 
 | MCP | 用途 | インストールコマンド |
 |-----|------|---------------------|
-| google-calendar | カレンダー連携 | `claude mcp add google-calendar -- npx -y @cocal/google-calendar-mcp` |
+| google-workspace | Docs/Drive/Sheets/Slides/Gmail/Calendar/Tasks/Forms/Chat 統合 | `claude mcp add google_workspace -- uvx workspace-mcp` |
+| google-calendar（任意） | カレンダー専用・軽量。workspace と併用可（カレンダーだけ素早く操作したい時用） | `claude mcp add google-calendar -- npx -y @cocal/google-calendar-mcp` |
+
+##### google-workspace のセットアップ手順
+
+1. **Google Cloud Console で API 有効化**（プロジェクト単位）
+   - 議事録・ナレッジ用途の最低限: Docs / Drive / Sheets / Slides / Gmail / Calendar / Tasks API
+   - フォーム連携も使うなら Forms API、社内チャット連携なら Chat API も追加
+2. **OAuth 2.0 クライアントID発行**（デスクトップアプリ種別）→ `credentials.json` をダウンロード
+3. **クレデンシャル配置** — 環境変数 `GOOGLE_OAUTH_CREDENTIALS=/path/to/credentials.json` を設定、または `~/.workspace-mcp/credentials.json` に配置
+4. **MCP 登録** — `claude mcp add google_workspace -- uvx workspace-mcp`
+5. **初回認証** — 任意のツール（例: `mcp__google_workspace__list_calendars`）を呼ぶとブラウザでOAuth同意フローが立ち上がる → `~/.workspace-mcp/tokens/<email>.json` にトークン保存
+
+**重要な注意:**
+- OAuth refresh token は通常長期有効だが、**約7日でセッションが切れることがある**（Google側ポリシー・未使用期間・パスワード変更など）。失効時は同じツールを再度呼ぶと再認証フローが走る
+- 複数アカウントを切り替える場合は `mcp__google_workspace__manage_accounts` で管理
+- `google-calendar` MCP（@cocal/...）と機能が重複する。両方入れても害はないが、用途を分けないなら google-workspace 一本で足りる
+
+#### コミュニケーション系（Claude Code ビルトイン）
+
+| MCP | 用途 | インストールコマンド |
+|-----|------|---------------------|
 | Slack | Slack連携 | Claude Code のビルトイン機能（プラグイン有効化） |
-| Gmail | Gmail連携 | Claude Code のビルトイン機能（プラグイン有効化） |
+| Gmail | Gmail連携 | Claude Code のビルトイン機能（自動接続。google-workspace の Gmail と用途で使い分け） |
+
+#### アナリティクス系（任意・データ分析向け）
+
+Google Cloud で BigQuery / Cloud Logging / Cloud Monitoring API などを有効化済みなら、以下を検討。実装が流動的なので**利用前に最新の公式・コミュニティ MCP を確認**すること。
+
+| MCP | 用途 | 備考 |
+|-----|------|------|
+| bigquery | BigQuery クエリ実行・データセット管理 | 公式実装は流動的。`gcloud auth application-default login` で ADC を通してから利用 |
+| cloud-logging | ログ分析 | 公式 MCP が出ていない場合は `gcloud logging read` を Bash 経由で代替 |
 
 #### 開発支援系
 
@@ -144,9 +176,11 @@ mcp__playwright__*
 mcp__memory__*
 mcp__whisper__*
 mcp__notebooklm-mcp__*
+mcp__google_workspace__*
 mcp__google-calendar__*
 mcp__slack__*
 mcp__claude_ai_Gmail__*
+mcp__claude_ai_Google_Drive__*
 ```
 
 ---
@@ -184,6 +218,7 @@ echo "✓ ファイル操作OK"
 - github: 自分のリポジトリ一覧
 - playwright: ページスナップショット
 - google-calendar: カレンダー一覧
+- google-workspace: `mcp__google_workspace__list_calendars` を呼んでブラウザOAuth同意 → カレンダー一覧が返ってくれば成立。続けて `mcp__google_workspace__list_drive_items`（Drive）, `mcp__google_workspace__search_gmail_messages`（Gmail）も1件ずつ叩いて疎通確認
 - notebooklm-mcp: `nlm doctor` で `Cookies: present` と `Account:` が表示されること、`nlm login --check` で `Auth is valid` が出ること。両方OKなら `mcp__notebooklm-mcp__notebook_list` を1回叩いて応答を確認
 
 ---
@@ -225,4 +260,5 @@ echo "✓ ファイル操作OK"
 - 既にインストール済みのMCPは再インストールしない
 - API キーが必要なサービスは、`.env` ファイルに保存するよう案内する
 - **NotebookLM の認証は約7日で切れる**。`/議事録作成` 等を実行する前に `nlm login --check` で検証し、`Auth is invalid` なら `nlm login` で再認証するようユーザーに案内する。MCP登録より先にログインしておかないと初回呼び出しが必ず失敗する
-- Google Calendar も同様に7日でトークン切れの可能性。初回起動時にOAuth認証フローが走る
+- **google-workspace / google-calendar も7日でトークン切れの可能性**。初回起動時にOAuth認証フローが走る。`invalid_grant` エラーが出たら同じツールをもう一度呼んで再認証フローを走らせる
+- google-workspace を使うなら、Google Cloud Console で**必要なAPIをすべて有効化済みであること**が前提（Docs/Drive/Sheets/Slides/Gmail/Calendar/Tasks など）。未有効化のAPIを叩くと403が返る
