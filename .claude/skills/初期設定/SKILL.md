@@ -58,7 +58,36 @@ Node.js が無い場合は `brew install node` を提案。
 | MCP | 用途 | インストールコマンド |
 |-----|------|---------------------|
 | whisper | 音声文字起こし | `claude mcp add whisper -- npx -y whisper-mcp` |
-| notebooklm-mcp | NotebookLM連携 | `pip3 install notebooklm-mcp && claude mcp add notebooklm-mcp -- notebooklm-mcp` |
+| notebooklm-mcp | NotebookLM連携 | （3ステップ・下記参照） |
+
+##### NotebookLM のセットアップ（重要：パッケージ名と順序に注意）
+
+⚠️ **パッケージ名の罠**: PyPI には `notebooklm-mcp` と `notebooklm-mcp-cli` という似た名前の **全く別物のパッケージ** が存在する。
+このテンプレが想定するのは **`notebooklm-mcp-cli`** の方（`nlm` CLI を同梱、Google アカウントでブラウザログインする方式）。
+誤って `notebooklm-mcp`（Selenium ベース・別チーム）を入れると `nlm` コマンドが存在せず、`notebooklm-mcp init <URL>` を要求されて詰むので注意。
+
+NotebookLM は **インストール → ログイン → 検証 → MCP登録** の順で進める。
+ログイン前に MCP を登録すると、初回呼び出しで必ず失敗する。
+
+```bash
+# ① CLI インストール（uv 推奨。nlm と notebooklm-mcp の2バイナリが入る）
+uv tool install notebooklm-mcp-cli
+# uv が無い環境では: pip3 install --user notebooklm-mcp-cli
+
+# ② Google アカウントでログイン（ブラウザが立ち上がる）
+nlm login
+
+# ③ ログイン状態を確認（"Cookies: present" / "Account: ..." が出ればOK）
+nlm doctor
+
+# ④ MCP として Claude Code に登録
+claude mcp add notebooklm-mcp -- notebooklm-mcp
+```
+
+**重要な注意:**
+- Cookie ベース認証なので **約7日でセッションが切れる**。`nlm login --check` で検査でき、切れていたら `nlm login` で再認証
+- 複数 Google アカウントを使い分ける場合は `nlm login switch <profile>` でデフォルトを切り替える
+- Gemini CLI / Cursor / Windsurf を使っているなら `nlm setup add <client>` で MCP を自動登録できる（Claude Code は対象外なので手動の `claude mcp add` が必要）
 
 #### コミュニケーション系
 
@@ -155,6 +184,7 @@ echo "✓ ファイル操作OK"
 - github: 自分のリポジトリ一覧
 - playwright: ページスナップショット
 - google-calendar: カレンダー一覧
+- notebooklm-mcp: `nlm doctor` で `Cookies: present` と `Account:` が表示されること、`nlm login --check` で `Auth is valid` が出ること。両方OKなら `mcp__notebooklm-mcp__notebook_list` を1回叩いて応答を確認
 
 ---
 
@@ -194,5 +224,5 @@ echo "✓ ファイル操作OK"
 - グローバルMCP（`~/.claude/` 配下）は変更しない。プロジェクトローカルの `.mcp.json` に追加する
 - 既にインストール済みのMCPは再インストールしない
 - API キーが必要なサービスは、`.env` ファイルに保存するよう案内する
-- NotebookLM は `nlm login` での認証が必要。インストール後に案内する
-- Google Calendar は初回起動時にOAuth認証フローが走る
+- **NotebookLM の認証は約7日で切れる**。`/議事録作成` 等を実行する前に `nlm login --check` で検証し、`Auth is invalid` なら `nlm login` で再認証するようユーザーに案内する。MCP登録より先にログインしておかないと初回呼び出しが必ず失敗する
+- Google Calendar も同様に7日でトークン切れの可能性。初回起動時にOAuth認証フローが走る

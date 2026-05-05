@@ -79,7 +79,8 @@
       "Bash(pip3 install:*)",
       "Skill(*)",
       "WebSearch",
-      "WebFetch"
+      "WebFetch",
+      "Edit(/.claude/skills/議事録作成_NBLM連携/**)"
     ]
   }
 }
