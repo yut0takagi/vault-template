@@ -163,6 +163,53 @@ Google Cloud で BigQuery / Cloud Logging / Cloud Monitoring API などを有効
 
 ---
 
+### Phase 2.5: obsidian-second-brain 統合（強く推奨）
+
+[obsidian-second-brain](https://github.com/eugeniughelbur/obsidian-second-brain) はObsidian vault を「自己書き換え型セカンドブレイン」として運用するための Claude Code スキル群（Karpathy の LLM Wiki パターンを発展させたもの）。**30+ のスラッシュコマンド** が追加され、`/obsidian-daily` `/obsidian-init` `/obsidian-decide` `/research` `/research-deep` `/youtube` `/x-read` `/x-pulse` 等が使えるようになる。
+
+ユーザーに導入するか確認し、Yesならインストール:
+
+```bash
+# 1. リポジトリをクローン
+git clone https://github.com/eugeniughelbur/obsidian-second-brain.git ~/Develop/obsidian-second-brain
+
+# 2. インストールスクリプト実行（コマンド群を ~/.claude/commands/ にコピー、スキルを ~/.claude/skills/ にリンク）
+cd ~/Develop/obsidian-second-brain
+bash install.sh
+
+# 3. (任意) Research toolkit を使うなら API キー設定
+# install.sh が対話的に聞いてくる: Grok (xAI), Perplexity, YouTube API
+# 後から手動設定する場合: ~/.config/obsidian-second-brain/.env を編集
+
+# 4. vault パスを環境変数に設定（オプションだが推奨）
+echo 'export OBSIDIAN_VAULT_PATH="$HOME/vault"' >> ~/.zshrc  # 自分のvaultパスに置き換える
+```
+
+**インストール後の動作確認:**
+
+```bash
+# Claude Code を再起動して、コマンド一覧に obsidian-* が追加されているか確認
+ls ~/.claude/commands/ | grep obsidian
+ls ~/.claude/skills/ | grep obsidian-second-brain
+```
+
+**追加されるコマンドの一部:**
+
+| コマンド | 用途 |
+|---|---|
+| `/obsidian-daily` | デイリーノート自動生成（カレンダー・タスク・会話文脈を反映） |
+| `/obsidian-init` | vault 初期化（プリセット選択: personal/team/research/builder） |
+| `/obsidian-decide` `/obsidian-adr` | 意思決定の記録（ADR形式） |
+| `/obsidian-health` | vault 健全性チェック（壊れたリンク・古い情報・矛盾検出） |
+| `/research` `/research-deep` | Web リサーチ → vault に AI-first ノートとして保存 |
+| `/x-read` `/x-pulse` | X (Twitter) 投稿の深掘り読解 |
+| `/youtube` | YouTube動画の文字起こし → ノート化 |
+| `/notebooklm` | NotebookLM 経由のソース固定リサーチ |
+
+導入後、`CLAUDE.md` の構造と整合させるため `_CLAUDE.md` の運用ルールを確認すると良い。
+
+---
+
 ### Phase 3: settings.json 権限更新
 
 インストールしたMCPに合わせて、`.claude/settings.json` の `permissions.allow` にMCP権限を追加する。
